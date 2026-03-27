@@ -1,4 +1,4 @@
 object Main extends App {
-  println("Hello, World!") //wichser
+  println("Hello, World!") //hi :)
 
 }
