@@ -10,5 +10,5 @@ case class Round() {
 
 }
 
-val wurf = Dice()
-wurf.roll()
+val babysFirstDiceRoll = Dice()
+babysFirstDiceRoll.roll()

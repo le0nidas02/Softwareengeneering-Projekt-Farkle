@@ -16,5 +16,7 @@
     <orderEntry type="library" name="sbt: scala-sdk-2.13.18" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.18:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-parser-combinators_2.13:2.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scalactic:scalactic_2.13:3.2.14:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-reflect:2.13.18:jar" level="project" />
   </component>
 </module>
