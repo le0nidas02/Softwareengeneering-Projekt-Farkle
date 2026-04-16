@@ -14,3 +14,6 @@ case class Field(dice: List[Dice]) {
     }.mkString("\n")
   }
 }
+
+
+// Nur dafür da Ausgabe auf Konsole nicht mehr untereinander, sondern nebeneinander auszugeben
