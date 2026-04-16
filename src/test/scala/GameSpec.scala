@@ -7,7 +7,7 @@ class DiceSpec extends AnyWordSpec {
       val d = Dice.roll()
       d.value should (be >= 1 and be <= 6)
     }
-    "have a string representation for each value" in {
+    "Each Value should have a String representation" in {
       Dice(1).toString should not be empty
       Dice(2).toString should not be empty
       Dice(3).toString should not be empty

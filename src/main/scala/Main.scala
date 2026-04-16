@@ -1,5 +1,14 @@
 object Main extends App {
-  println("Hello, World!") //hi :)
-  var einstring: String = "Hallo, ich bin ein String!"
-  println(einstring)
+  println("--- Farkle Dice Roll Simulation ---")
+  
+  // Simulate rolling 6 dice
+  val rolledDice = List.fill(6)(Dice.roll())
+  
+  println(s"You rolled ${rolledDice.length} dice:")
+  
+  // Create a field and display it
+  val field = Field(rolledDice)
+  println(field.toString)
+  
+  println("\n--- Simulation finished ---")
 }
