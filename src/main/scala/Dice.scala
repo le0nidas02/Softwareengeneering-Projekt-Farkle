@@ -1,12 +1,18 @@
 case class Dice(value: Int) {
   override def toString: String = {
     value match {
-      case 1 => "[  *  ]"
-      case 2 => "[*    ]" // Note: Kingdom Come style or standard? Standard 2 is diagonal
-      case 3 => "[* * *]"
-      case 4 => "[*   *]\n[*   *]" // Example multi-line representation
+      case 1 => "[     ]\n[  *  ]\n[     ]"
+
+      case 2 => "[*    ]\n[     ]\n[    *]"
+
+      case 3 => "[*    ]\n[  *  ]\n[    *]"
+
+      case 4 => "[*   *]\n[     ]\n[*   *]"
+
       case 5 => "[*   *]\n[  *  ]\n[*   *]"
-      case 6 => "[* * *]\n[* * *]"
+
+      case 6 => "[* * *]\n[     ]\n[* * *]"
+      
       case _ => "[     ]"
     }
   }
