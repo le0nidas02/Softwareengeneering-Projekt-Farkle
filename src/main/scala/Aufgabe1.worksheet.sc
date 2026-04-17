@@ -12,3 +12,8 @@ case class Round() {
 
 val babysFirstDiceRoll = Dice()
 babysFirstDiceRoll.roll()
+babysFirstDiceRoll.roll()
+babysFirstDiceRoll.roll()
+babysFirstDiceRoll.roll()
+babysFirstDiceRoll.roll()
+babysFirstDiceRoll.roll()
