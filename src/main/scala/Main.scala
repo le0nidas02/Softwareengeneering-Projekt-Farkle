@@ -1,4 +1,4 @@
-object Main extends App {
+object main extends App {
   println("--- Farkle Dice Roll Simulation ---")
   
   // Simulate rolling 6 dice
