@@ -13,13 +13,11 @@ class TuiSpec extends AnyWordSpec {
       val controller = Controller(game)
       val tui = TUI(controller)
       
-      // Wir simulieren die Eingabe "r" gefolgt von "q" (mit Zeilenumbrüchen)
       val in = new ByteArrayInputStream("r\nq\n".getBytes)
       Console.withIn(in) {
         tui.run()
       }
       
-      // Nach dem "r" sollte der Controller gewürfelt haben
       controller.game.dice.length should be(6)
     }
     
@@ -28,13 +26,11 @@ class TuiSpec extends AnyWordSpec {
       val controller = Controller(game)
       val tui = TUI(controller)
       
-      // Wir simulieren eine falsche Eingabe und dann "q"
       val in = new ByteArrayInputStream("blabla\nq\n".getBytes)
       Console.withIn(in) {
         tui.run()
       }
       
-      // Nichts sollte sich am Spielzustand geändert haben
       controller.game.dice should be(empty)
     }
   }

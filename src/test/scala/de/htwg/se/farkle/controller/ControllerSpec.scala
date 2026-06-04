@@ -11,17 +11,14 @@ class ControllerSpec extends AnyWordSpec {
       val game = Game()
       val controller = Controller(game)
       
-      // Wir bauen uns einen falschen Beobachter, der nur prüfen soll, ob er gerufen wird
       var notified = false
       val testObserver = new Observer {
         override def update(): Unit = notified = true
       }
       controller.add(testObserver)
       
-      // Aktion ausführen
       controller.rollDice()
       
-      // Assertions (Prüfungen)
       notified should be(true)
       controller.game.dice.length should be(6)
     }
