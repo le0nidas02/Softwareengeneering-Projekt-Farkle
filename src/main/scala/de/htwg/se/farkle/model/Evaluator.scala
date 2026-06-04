@@ -5,14 +5,12 @@ object Evaluator {
   def evaluate(dice: List[Dice]): Int = {
     val values = dice.map(_.value).sorted
 
-    // 1. KCD-Straßen-Check (Sauber funktional, ohne 'return')
+    // KCD-Straßen-Check
     if (values == List(1, 2, 3, 4, 5, 6)) 1500
     else if (values == List(1, 2, 3, 4, 5)) 500
     else if (values == List(2, 3, 4, 5, 6)) 750
     else {
-      // 2. Normale Pasche und Singles
       val counts = dice.groupBy(_.value).map { case (k, v) => (k, v.size) }
-      
       counts.foldLeft(0) { case (score, (value, count)) =>
         score + scoreForGroup(value, count)
       }
