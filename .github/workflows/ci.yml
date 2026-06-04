@@ -21,6 +21,9 @@ jobs:
         java-version: '26'
         cache: 'sbt'
 
+    - name: Setup sbt launcher
+      uses: sbt/setup-sbt@v1
+
     - name: Run Tests and Coverage
       run: sbt clean coverage test coverageReport
 
