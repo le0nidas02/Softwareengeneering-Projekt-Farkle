@@ -1,3 +1,4 @@
+package de.htwg.se.farkle.model
 case class Field(dice: List[Dice]) {
   override def toString: String = {
     val diceStrings = dice.map(_.toString)

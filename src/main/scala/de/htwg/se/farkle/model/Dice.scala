@@ -1,3 +1,4 @@
+package de.htwg.se.farkle.model
 case class Dice(value: Int) {
   override def toString: String = {
     value match {
