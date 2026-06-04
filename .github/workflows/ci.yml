@@ -25,7 +25,9 @@ jobs:
       uses: sbt/setup-sbt@v1
 
     - name: Run Tests and Coverage
-      run: sbt clean coverage test coverageReport
-
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: sbt clean coverage test coverageReport coveralls
+      
     - name: Run Mutation Testing (Stryker4s)
       run: sbt stryker
