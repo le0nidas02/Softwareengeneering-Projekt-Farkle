@@ -11,7 +11,6 @@ class Controller(var game: Game) extends Observable {
     notifyObservers()
   }
 
-  // Diese Methode können wir jetzt wunderbar deterministisch testen!
   def checkBust(): Unit = {
     if (game.dice.nonEmpty && Evaluator.evaluate(game.dice) == 0) {
       game = game.nextPlayer()
@@ -30,7 +29,6 @@ class Controller(var game: Game) extends Observable {
       activeDice = newActive,
       dice = List.empty 
     )
-    
     notifyObservers()
   }
 
