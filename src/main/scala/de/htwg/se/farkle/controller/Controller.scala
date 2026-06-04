@@ -1,9 +1,10 @@
 package de.htwg.se.farkle.controller
 
-import de.htwg.se.farkle.model.{Game, Evaluator}
+import de.htwg.se.farkle.model.{Game, Evaluator, KcdEvaluator}
 import de.htwg.se.farkle.util.Observable
 
-class Controller(var game: Game) extends Observable {
+// Der Controller nimmt jetzt ZWEI Parameter: Das Game und die Strategie (mit Standardwert)
+class Controller(var game: Game, val evaluator: Evaluator = new KcdEvaluator()) extends Observable {
   
   def rollDice(): Unit = {
     game = game.rollActive()
@@ -12,14 +13,16 @@ class Controller(var game: Game) extends Observable {
   }
 
   def checkBust(): Unit = {
-    if (game.dice.nonEmpty && Evaluator.evaluate(game.dice) == 0) {
+    // Hier nutzen wir jetzt die Instanz "evaluator"
+    if (game.dice.nonEmpty && evaluator.evaluate(game.dice) == 0) {
       game = game.nextPlayer()
     }
   }
 
   def keep(indices: List[Int]): Unit = {
     val keptDice = indices.map(i => i - 1).flatMap(i => game.dice.lift(i))
-    val points = Evaluator.evaluate(keptDice)
+    // Auch hier: Aufruf über die Instanz
+    val points = evaluator.evaluate(keptDice)
     
     var newActive = game.activeDice - keptDice.length
     if (newActive <= 0) newActive = 6 
