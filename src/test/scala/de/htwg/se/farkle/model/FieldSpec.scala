@@ -8,7 +8,8 @@ class FieldSpec extends AnyWordSpec {
     "format dice correctly in a row" in {
       val field = Field(List(Dice(1), Dice(2)))
       val output = field.toString
-      output should include("[  * ]") 
+      // HIER WAR DER FEHLER: Es müssen exakt zwei Leerzeichen auf beiden Seiten sein!
+      output should include("[  *  ]") 
       output should include("[    *]") 
     }
     
