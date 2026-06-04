@@ -5,7 +5,7 @@ scalaVersion  := "3.3.7" // Aktualisiert für optimalen Metals-Support!
 
 // Aktuelles ScalaTest für Scala 3
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % "test"
-
+coverageExcludedFiles := ".*Main.*"
 //*******************************************************************************//
 // Libraries für spätere Tasks (kompatibel mit Scala 3)
 // Auskommentiert lassen, bis wir sie brauchen!
