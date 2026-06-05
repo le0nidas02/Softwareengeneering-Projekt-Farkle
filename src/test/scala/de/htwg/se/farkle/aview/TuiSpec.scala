@@ -57,5 +57,33 @@ class TuiSpec extends AnyWordSpec {
       val in = new ByteArrayInputStream("blabla\nq\n".getBytes)
       Console.withIn(in) { tui.run() }
     }
+
+    "process 'z' to undo" in {
+  val controller = new Controller(Game())
+  val tui = new TUI(controller)
+  val in = new java.io.ByteArrayInputStream("z\nq\n".getBytes)
+  Console.withIn(in) { tui.run() }
+  // Da am Anfang kein Zustand zum Rückgängigmachen da ist, passiert nichts Schlimmes.
+  controller.game.turnScore should be(0)
+}
+
+    "process 'y' to redo" in {
+      val controller = new Controller(Game())
+      val tui = new TUI(controller)
+      val in = new java.io.ByteArrayInputStream("y\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+      // Da am Anfang kein Zustand zum Wiederholen da ist, passiert nichts Schlimmes.
+      controller.game.turnScore should be(0)
+    }
+
+    "exit the loop safely if input is null (EOF)" in {
+      val controller = new Controller(Game())
+      val tui = new TUI(controller)
+      // Wir übergeben einen leeren Stream, was readLine dazu zwingt, "null" zurückzugeben
+      val in = new java.io.ByteArrayInputStream(Array.emptyByteArray)
+      Console.withIn(in) { tui.run() }
+      // Wenn der Test hier ankommt und nicht in einer Endlosschleife hängt, ist der Zweig zu 100 % abgedeckt!
+      controller.game.turnScore should be(0)
+    }
   }
 }

@@ -109,5 +109,50 @@ class ControllerSpec extends AnyWordSpec {
       // Spieler darf nicht gewechselt haben, da er im falschen Zustand ist
       controller.game.currentPlayer.name should be("Player 1")
     }
+
+    "support undo and redo" in {
+      val game = Game(dice = List(Dice(1), Dice(5), Dice(2), Dice(3)))
+      val controller = new Controller(game)
+      controller.state = new KeepingState()
+  
+      // 1. Aktion ausführen
+      controller.keep(List(1, 2))
+      controller.game.turnScore should be(150)
+      controller.state.isInstanceOf[RollingState] should be(true)
+  
+      // 2. Undo (Zeit zurückdrehen)
+      controller.undo()
+      controller.game.turnScore should be(0) 
+      controller.state.isInstanceOf[KeepingState] should be(true)
+  
+      // 3. Redo (Zeit wieder vordrehen)
+      controller.redo()
+      controller.game.turnScore should be(150)
+      controller.state.isInstanceOf[RollingState] should be(true)
+    }
+
+    "support undo and redo with SetCommand" in {
+      val game = Game(dice = List(Dice(1), Dice(5), Dice(2), Dice(3)))
+      val controller = new Controller(game)
+      controller.state = new KeepingState()
+      
+      // 1. Aktion ausführen (doStep im Command wird gerufen)
+      controller.keep(List(1, 2))
+      controller.game.turnScore should be(150)
+      
+      // 2. Undo (undoStep im Command wird gerufen)
+      controller.undo()
+      controller.game.turnScore should be(0) 
+      
+      // 3. Redo (redoStep im Command wird gerufen)
+      controller.redo()
+      controller.game.turnScore should be(150)
+      
+      // 4. Leeres Undo/Redo provozieren (um die Coverage der leeren Listen zu füllen)
+      controller.undo()
+      controller.undo() // Sollte nichts abstürzen
+      controller.redo()
+      controller.redo() // Sollte nichts abstürzen
+    }
   }
 }

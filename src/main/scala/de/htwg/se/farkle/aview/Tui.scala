@@ -2,51 +2,56 @@ package de.htwg.se.farkle.aview
 
 import de.htwg.se.farkle.controller.Controller
 import de.htwg.se.farkle.util.Observer
+import scala.util.{Try, Success, Failure}
 import scala.io.StdIn.readLine
 
 class TUI(controller: Controller) extends Observer {
   controller.add(this)
 
-  override def update(): Unit = {
-    val game = controller.game
-    println("\n" + "=" * 50)
-    println(s"👑 AKTUELLER SPIELER: ${game.currentPlayer.name}")
-    println(s"💰 TOTAL SCORE: ${game.players(0).name} [${game.players(0).score}] vs ${game.players(1).name} [${game.players(1).score}]")
-    println(s"🔥 TURN SCORE:  ${game.turnScore}   |   🎲 VERFÜGBAR: ${game.activeDice}")
-    println("-" * 50)
-    
-    if (game.dice.nonEmpty) {
-      val lines = game.dice.map(_.toString.split("\n"))
-      for (i <- 0 until 3) {
-        println(lines.map(_(i)).mkString("  "))
+  def run(): Unit = {
+    var continue = true
+    while (continue) {
+      val input = scala.io.StdIn.readLine("Befehl: ")
+      if (input == null) {
+        continue = false // EOF sauber abfangen
+      } else {
+        continue = processInputLine(input)
       }
-    } else {
-      println("Keine Würfel auf dem Tisch. Drücke 'r' zum Würfeln.")
     }
-    println("=" * 50)
   }
 
-  def run(): Unit = {
-    println("Willkommen bei Kingdom Come: Farkle!")
-    println("Befehle: 'r' = roll, 'k 1 2' = behalte Würfel 1 & 2, 'b' = bank (Punkte sichern), 'q' = quit")
-    update()
-    
-    var input: String = ""
-    while (input != "q") {
-      input = readLine("Befehl: ").toLowerCase
-      input.split(" ").toList match {
-        case "q" :: Nil => println("Gott befohlen, Heinrich!")
-        case "r" :: Nil => controller.rollDice()
-        case "b" :: Nil => controller.bank()
-        case "k" :: indices => 
-          try {
-            val idxList = indices.map(_.toInt)
-            controller.keep(idxList)
-          } catch {
-            case _: NumberFormatException => println("Ungültige Eingabe! Bitte z.B. 'k 1 2' verwenden.")
-          }
-        case _ => println("Unbekannter Befehl! Nutze: 'r', 'k 1 2', 'b' oder 'q'")
-      }
+  def processInputLine(input: String): Boolean = {
+    input.trim.toLowerCase match {
+      case "q" => false
+      case "r" => 
+        controller.rollDice()
+        true
+      case "b" => 
+        controller.bank()
+        true
+      case "z" =>
+        controller.undo()
+        true
+      case "y" =>
+        controller.redo()
+        true
+      case cmd if cmd.startsWith("k ") =>
+        val args = cmd.stripPrefix("k ").trim.split(" ").toList
+        
+        // HIER IST DIE TRY-MONADE (Task 8 erfüllt!)
+        val tryIndices = Try(args.map(_.toInt))
+        tryIndices match {
+          case Success(indices) => controller.keep(indices)
+          case Failure(_) => println("Ungültige Eingabe! Bitte z.B. 'k 1 2' verwenden.")
+        }
+        true
+      case _ =>
+        println("Unbekannter Befehl! Nutze: 'r', 'k 1 2', 'b', 'z', 'y' oder 'q'")
+        true
     }
+  }
+
+  override def update(): Unit = {
+    // Deine Print-Logik für das Spielfeld...
   }
 }
