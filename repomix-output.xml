@@ -1,0 +1,1117 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    ci.yml
+project/
+  build.properties
+  metals.sbt
+  plugins.sbt
+src/
+  main/
+    scala/
+      de/
+        htwg/
+          se/
+            farkle/
+              aview/
+                Tui.scala
+              controller/
+                Controller.scala
+                GameState.scala
+                SetCommand.scala
+              model/
+                Dice.scala
+                Evaluator.scala
+                Field.scala
+                Game.scala
+                KcdEvaluator.scala
+                Player.scala
+              util/
+                Observer.scala
+                UndoManager.scala
+              Main.scala
+  test/
+    scala/
+      de/
+        htwg/
+          se/
+            farkle/
+              aview/
+                TuiSpec.scala
+              controller/
+                ControllerSpec.scala
+              model/
+                DiceSpec.scala
+                EvaluatorSpec.scala
+                FieldSpec.scala
+                GameSpec.scala
+                PlayerSpec.scala
+              util/
+                ObserverSpec.scala
+                UndoManagerSpec.scala
+.gitignore
+build.sbt
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="project/build.properties">
+sbt.version=1.12.8
+</file>
+
+<file path="project/metals.sbt">
+// format: off
+// DO NOT EDIT! This file is auto-generated.
+
+// This file enables sbt-bloop to create bloop config files.
+
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.0.19")
+
+// format: on
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/controller/SetCommand.scala">
+package de.htwg.se.farkle.controller
+
+import de.htwg.se.farkle.util.Command
+import de.htwg.se.farkle.model.Game
+
+class SetCommand(controller: Controller, oldGame: Game, oldState: GameState, newGame: Game, newState: GameState) extends Command {
+  override def doStep(): Unit = {
+    controller.game = newGame
+    controller.state = newState
+  }
+  
+  override def undoStep(): Unit = {
+    controller.game = oldGame
+    controller.state = oldState
+  }
+  
+  override def redoStep(): Unit = {
+    controller.game = newGame
+    controller.state = newState
+  }
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/model/Dice.scala">
+package de.htwg.se.farkle.model
+case class Dice(value: Int) {
+  override def toString: String = {
+    value match {
+      case 1 => "[     ]\n[  *  ]\n[     ]"
+
+      case 2 => "[*    ]\n[     ]\n[    *]"
+
+      case 3 => "[*    ]\n[  *  ]\n[    *]"
+
+      case 4 => "[*   *]\n[     ]\n[*   *]"
+
+      case 5 => "[*   *]\n[  *  ]\n[*   *]"
+
+      case 6 => "[* * *]\n[     ]\n[* * *]"
+      
+      case _ => "[     ]"
+    }
+  }
+}
+
+object Dice {
+  private val random = new scala.util.Random
+  def roll(): Dice = Dice(random.between(1, 7))
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/model/Field.scala">
+package de.htwg.se.farkle.model
+case class Field(dice: List[Dice]) {
+  override def toString: String = {
+    val diceStrings = dice.map(_.toString)
+    val maxLines = diceStrings.map(_.split("\n").length).max
+    
+    val paddedDice = diceStrings.map { ds =>
+      val lines = ds.split("\n")
+      val padding = maxLines - lines.length
+      lines ++ Array.fill(padding)(" " * lines(0).length)
+    }
+
+    (0 until maxLines).map { lineIdx =>
+      paddedDice.map(d => d(lineIdx)).mkString("  ")
+    }.mkString("\n")
+  }
+}
+
+
+// Nur dafür da Ausgabe auf Konsole nicht mehr untereinander, sondern nebeneinander auszugeben
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/model/KcdEvaluator.scala">
+package de.htwg.se.farkle.model
+
+class KcdEvaluator extends Evaluator {
+  
+  override def evaluate(dice: List[Dice]): Int = {
+    val values = dice.map(_.value).sorted
+
+    if (values == List(1, 2, 3, 4, 5, 6)) 1500
+    else if (values == List(1, 2, 3, 4, 5)) 500
+    else if (values == List(2, 3, 4, 5, 6)) 750
+    else {
+      val counts = dice.groupBy(_.value).map { case (k, v) => (k, v.size) }
+      counts.foldLeft(0) { case (score, (value, count)) =>
+        score + scoreForGroup(value, count)
+      }
+    }
+  }
+
+  private def scoreForGroup(value: Int, count: Int): Int = {
+    if (count >= 3) {
+      val baseScore = if (value == 1) 1000 else value * 100
+      val multiplier = 1 << (count - 3) 
+      baseScore * multiplier
+    } else {
+      if (value == 1) count * 100
+      else if (value == 5) count * 50
+      else 0
+    }
+  }
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/model/Player.scala">
+package de.htwg.se.farkle.model
+
+case class Player(name: String, score: Int = 0) {
+  // Eine Hilfsmethode, um dem Spieler leicht Punkte gutzuschreiben (erzeugt eine Kopie)
+  def addScore(points: Int): Player = copy(score = score + points)
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/util/Observer.scala">
+package de.htwg.se.farkle.util
+
+trait Observer {
+  def update(): Unit
+}
+
+trait Observable {
+  var subscribers: Vector[Observer] = Vector()
+  
+  def add(s: Observer): Unit = subscribers = subscribers :+ s
+  
+  def remove(s: Observer): Unit = subscribers = subscribers.filterNot(_ == s)
+  
+  def notifyObservers(): Unit = subscribers.foreach(o => o.update())
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/util/UndoManager.scala">
+package de.htwg.se.farkle.util
+
+trait Command {
+  def doStep(): Unit
+  def undoStep(): Unit
+  def redoStep(): Unit
+}
+
+class UndoManager {
+  private var undoStack: List[Command] = Nil
+  private var redoStack: List[Command] = Nil
+
+  def doStep(command: Command): Unit = {
+    undoStack = command :: undoStack
+    redoStack = Nil
+    command.doStep()
+  }
+
+  def undoStep(): Unit = {
+    undoStack match {
+      case Nil => // Nichts rückgängig zu machen
+      case head :: stack =>
+        head.undoStep()
+        undoStack = stack
+        redoStack = head :: redoStack
+    }
+  }
+
+  def redoStep(): Unit = {
+    redoStack match {
+      case Nil => // Nichts zu wiederholen
+      case head :: stack =>
+        head.redoStep()
+        redoStack = stack
+        undoStack = head :: undoStack
+    }
+  }
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/Main.scala">
+package de.htwg.se.farkle
+
+// Hier importieren wir die Klassen aus den anderen Ordnern!
+import de.htwg.se.farkle.model._  // Das _ bedeutet: "Importiere ALLES aus dem model-Ordner"
+import de.htwg.se.farkle.controller.Controller
+import de.htwg.se.farkle.aview.TUI
+
+object Main {
+  def main(args: Array[String]): Unit = {
+    println("Starte Kingdom Come: Farkle...")
+    
+    // 1. Model erstellen (Unsere reinen Daten)
+    val game = Game()
+    
+    // 2. Controller erstellen und Model übergeben (Das Gehirn)
+    val controller = Controller(game)
+    
+    // 3. TUI erstellen und Controller übergeben (Die Augen)
+    val tui = TUI(controller)
+    
+    // Spiel-Schleife der TUI starten
+    tui.run()
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/model/DiceSpec.scala">
+package de.htwg.se.farkle.model
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class DiceSpec extends AnyWordSpec {
+  "A Dice" should {
+    "have a value between 1 and 6" in {
+      val d = Dice.roll()
+      d.value should (be >= 1 and be <= 6)
+    }
+    "have a String representation for each value" in {
+      Dice(1).toString should not be empty
+      Dice(2).toString should not be empty
+      Dice(3).toString should not be empty
+      Dice(4).toString should not be empty
+      Dice(5).toString should not be empty
+      Dice(6).toString should not be empty
+      Dice(0).toString should be("[     ]")
+    }
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/model/PlayerSpec.scala">
+package de.htwg.se.farkle.model
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class PlayerSpec extends AnyWordSpec {
+  "A Player" should {
+    "have a name and default score 0" in {
+      val player = Player("Heinrich")
+      player.name should be("Heinrich")
+      player.score should be(0)
+    }
+    "be able to add score to his total returning a new Player object" in {
+      val player = Player("Heinrich")
+      val updatedPlayer = player.addScore(1000)
+      updatedPlayer.score should be(1000)
+      player.score should be(0) // Der alte Spieler bleibt unverändert (Immutable!)
+    }
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/util/ObserverSpec.scala">
+package de.htwg.se.farkle.util
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class ObserverSpec extends AnyWordSpec {
+  "An Observable" should {
+    "add an Observer" in {
+      val observable = new Observable {}
+      val observer = new Observer {
+        var updated: Boolean = false
+        def update(): Unit = updated = true
+      }
+      observable.add(observer)
+      observable.subscribers should contain (observer)
+    }
+    
+    "remove an Observer" in {
+      val observable = new Observable {}
+      val observer = new Observer {
+        def update(): Unit = ()
+      }
+      observable.add(observer)
+      observable.remove(observer)
+      observable.subscribers should not contain (observer)
+    }
+    
+    "notify Observers when changed" in {
+      val observable = new Observable {}
+      var updated: Boolean = false
+      val observer = new Observer {
+        def update(): Unit = updated = true
+      }
+      observable.add(observer)
+      observable.notifyObservers()
+      updated should be (true)
+    }
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/util/UndoManagerSpec.scala">
+package de.htwg.se.farkle.util
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class UndoManagerSpec extends AnyWordSpec {
+  "An UndoManager" should {
+    "have a do, undo and redo step" in {
+      val undoManager = new UndoManager()
+      
+      var testState = 0
+      val command = new Command {
+        override def doStep(): Unit = testState += 1
+        override def undoStep(): Unit = testState -= 1
+        override def redoStep(): Unit = testState += 1
+      }
+
+      // Test doStep
+      undoManager.doStep(command)
+      testState should be(1)
+
+      // Test undoStep
+      undoManager.undoStep()
+      testState should be(0)
+
+      // Test leeres undoStep
+      undoManager.undoStep()
+      testState should be(0)
+
+      // Test redoStep
+      undoManager.redoStep()
+      testState should be(1)
+
+      // Test leeres redoStep
+      undoManager.redoStep()
+      testState should be(1)
+    }
+  }
+}
+</file>
+
+<file path="README.md">
+# Kingdom Come: Farkle
+
+[![Scala CI (Farkle)](https://github.com/le0nidas02/Softwareengeneering-Projekt-Farkle/actions/workflows/ci.yml/badge.svg)](https://github.com/le0nidas02/Softwareengeneering-Projekt-Farkle/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/le0nidas02/Softwareengeneering-Projekt-Farkle/badge.svg?branch=main)](https://coveralls.io/github/le0nidas02/Softwareengeneering-Projekt-Farkle?branch=main)
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/controller/GameState.scala">
+package de.htwg.se.farkle.controller
+
+trait GameState {
+  def rollDice(controller: Controller): Unit
+  def keep(controller: Controller, indices: List[Int]): Unit
+  def bank(controller: Controller): Unit
+}
+
+class RollingState extends GameState {
+  override def rollDice(controller: Controller): Unit = {
+    val oldGame = controller.game
+    val oldState = controller.state
+    
+    var newGame = controller.game.rollActive()
+    var newState: GameState = new KeepingState()
+    
+    // Bust-Check
+    if (newGame.dice.nonEmpty && controller.evaluator.evaluate(newGame.dice) == 0) {
+      newGame = newGame.nextPlayer()
+      newState = new RollingState()
+    }
+    
+    // Änderung über das Command Pattern ausführen!
+    controller.undoManager.doStep(new SetCommand(controller, oldGame, oldState, newGame, newState))
+    controller.notifyObservers()
+  }
+
+  override def keep(controller: Controller, indices: List[Int]): Unit = {
+    // Ignorieren im RollingState
+  }
+
+  override def bank(controller: Controller): Unit = {
+    if (controller.game.turnScore > 0) {
+      controller.doBank()
+    }
+  }
+}
+
+class KeepingState extends GameState {
+  override def rollDice(controller: Controller): Unit = {
+    // Ignorieren, er muss erst Würfel behalten
+  }
+
+  override def keep(controller: Controller, indices: List[Int]): Unit = {
+    controller.doKeep(indices)
+  }
+
+  override def bank(controller: Controller): Unit = {
+    // Ignorieren, er muss die liegenden Würfel erst auswerten
+  }
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/model/Game.scala">
+package de.htwg.se.farkle.model
+
+case class Game(
+  players: Vector[Player] = Vector(Player("Player 1"), Player("Player 2")),
+  currentPlayerIndex: Int = 0,
+  dice: List[Dice] = List.empty,
+  turnScore: Int = 0,
+  activeDice: Int = 6 // Wie viele Würfel darf ich noch in die Hand nehmen?
+) {
+  
+  def currentPlayer: Player = players(currentPlayerIndex)
+  
+  // Würfelt nur die noch aktiven Würfel neu aus
+  def rollActive(): Game = {
+    copy(dice = List.fill(activeDice)(Dice.roll()))
+  }
+  
+  // Wechselt den Spieler und resettet die Runde
+  def nextPlayer(): Game = {
+    copy(
+      currentPlayerIndex = (currentPlayerIndex + 1) % players.length,
+      turnScore = 0,
+      activeDice = 6,
+      dice = List.empty
+    )
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/model/FieldSpec.scala">
+package de.htwg.se.farkle.model
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class FieldSpec extends AnyWordSpec {
+  "A Field" should {
+    "format dice correctly in a row" in {
+      val field = Field(List(Dice(1), Dice(2)))
+      val output = field.toString
+      // HIER WAR DER FEHLER: Es müssen exakt zwei Leerzeichen auf beiden Seiten sein!
+      output should include("[  *  ]") 
+      output should include("[    *]") 
+    }
+    
+    "handle multi-line dice representation" in {
+      val field = Field(List(Dice(5)))
+      val lines = field.toString.split("\n")
+      lines.length should be(3)
+    }
+    
+    "correctly pad dice with different line heights" in {
+      val unevenField = Field(List(Dice(1), Dice(99))) 
+      val result = unevenField.toString
+      result should include ("[     ]") 
+    }
+  }
+}
+</file>
+
+<file path=".gitignore">
+target/
+.bloop/
+.pdf
+.metals/
+.bsp/
+project/target/
+project/project/
+.vscode/
+*.class
+*.log
+</file>
+
+<file path=".github/workflows/ci.yml">
+name: Scala CI (Farkle)
+
+on:
+  push:
+    branches: [ main, feature-ci-pipeline ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Project
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '26'
+        cache: 'sbt'
+
+    - name: Setup sbt launcher
+      uses: sbt/setup-sbt@v1
+
+    - name: Run Tests and Coverage
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: sbt clean coverage test coverageReport coveralls
+      
+    - name: Run Mutation Testing (Stryker4s)
+      run: sbt stryker
+</file>
+
+<file path="project/plugins.sbt">
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.4.4")
+addSbtPlugin("io.stryker-mutator" % "sbt-stryker4s" % "0.16.1")
+addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.3.11")
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/aview/Tui.scala">
+package de.htwg.se.farkle.aview
+
+import de.htwg.se.farkle.controller.Controller
+import de.htwg.se.farkle.util.Observer
+import scala.util.{Try, Success, Failure}
+import scala.io.StdIn.readLine
+
+class TUI(controller: Controller) extends Observer {
+  controller.add(this)
+
+  def run(): Unit = {
+    var continue = true
+    while (continue) {
+      val input = scala.io.StdIn.readLine("Befehl: ")
+      if (input == null) {
+        continue = false // EOF sauber abfangen
+      } else {
+        continue = processInputLine(input)
+      }
+    }
+  }
+
+  def processInputLine(input: String): Boolean = {
+    input.trim.toLowerCase match {
+      case "q" => false
+      case "r" => 
+        controller.rollDice()
+        true
+      case "b" => 
+        controller.bank()
+        true
+      case "z" =>
+        controller.undo()
+        true
+      case "y" =>
+        controller.redo()
+        true
+      case cmd if cmd.startsWith("k ") =>
+        val args = cmd.stripPrefix("k ").trim.split(" ").toList
+        
+        // HIER IST DIE TRY-MONADE (Task 8 erfüllt!)
+        val tryIndices = Try(args.map(_.toInt))
+        tryIndices match {
+          case Success(indices) => controller.keep(indices)
+          case Failure(_) => println("Ungültige Eingabe! Bitte z.B. 'k 1 2' verwenden.")
+        }
+        true
+      case _ =>
+        println("Unbekannter Befehl! Nutze: 'r', 'k 1 2', 'b', 'z', 'y' oder 'q'")
+        true
+    }
+  }
+
+  override def update(): Unit = {
+    // Deine Print-Logik für das Spielfeld...
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/model/EvaluatorSpec.scala">
+package de.htwg.se.farkle.model
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class EvaluatorSpec extends AnyWordSpec {
+  "A KcdEvaluator" should {
+    val evaluator = new KcdEvaluator()
+
+    "score single 1s as 100 and 5s as 50" in {
+      evaluator.evaluate(List(Dice(1))) should be(100)
+      evaluator.evaluate(List(Dice(5))) should be(50)
+      evaluator.evaluate(List(Dice(1), Dice(5))) should be(150)
+    }
+
+    "return 0 for dice that do not score" in {
+      evaluator.evaluate(List(Dice(2), Dice(3), Dice(4), Dice(6))) should be(0)
+    }
+
+    "score triplets correctly (KCD rules)" in {
+      evaluator.evaluate(List.fill(3)(Dice(1))) should be(1000)
+      evaluator.evaluate(List.fill(3)(Dice(2))) should be(200)
+      evaluator.evaluate(List.fill(3)(Dice(5))) should be(500)
+    }
+
+    "score four, five and six of a kind by doubling the score" in {
+      evaluator.evaluate(List.fill(4)(Dice(2))) should be(400)
+      evaluator.evaluate(List.fill(5)(Dice(1))) should be(4000)
+      evaluator.evaluate(List.fill(6)(Dice(1))) should be(8000)
+    }
+    
+    "score KCD straights correctly regardless of input order" in {
+      evaluator.evaluate(List(1, 2, 3, 4, 5, 6).map(Dice(_))) should be(1500)
+      evaluator.evaluate(List(1, 2, 3, 4, 5).map(Dice(_))) should be(500)
+      evaluator.evaluate(List(2, 3, 4, 5, 6).map(Dice(_))) should be(750)
+    }
+    
+    "score mixed combinations correctly" in {
+      evaluator.evaluate(List(Dice(2), Dice(2), Dice(2), Dice(5))) should be(250)
+    }
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/model/GameSpec.scala">
+package de.htwg.se.farkle.model
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+
+class GameSpec extends AnyWordSpec {
+  "A Game" should {
+    "start with 2 default players and active state" in {
+      val game = Game()
+      game.players.length should be(2)
+      game.currentPlayer.name should be("Player 1")
+      game.dice should be(empty)
+      game.turnScore should be(0)
+      game.activeDice should be(6)
+    }
+    
+    "roll only the active amount of dice" in {
+      val game = Game(activeDice = 4)
+      val newGame = game.rollActive()
+      newGame.dice.length should be(4)
+      newGame.dice.foreach(d => d.value should (be >= 1 and be <= 6))
+    }
+    
+    "switch to the next player and reset turn state" in {
+      val game = Game(turnScore = 500, activeDice = 2, dice = List(Dice(1)))
+      val newGame = game.nextPlayer()
+      
+      newGame.currentPlayer.name should be("Player 2")
+      newGame.turnScore should be(0)
+      newGame.activeDice should be(6)
+      newGame.dice should be(empty)
+    }
+    
+    "loop back to player 1 when player 2 is done" in {
+      val game = Game(currentPlayerIndex = 1)
+      val newGame = game.nextPlayer()
+      newGame.currentPlayer.name should be("Player 1")
+    }
+  }
+}
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/model/Evaluator.scala">
+package de.htwg.se.farkle.model
+
+trait Evaluator {
+  def evaluate(dice: List[Dice]): Int
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/aview/TuiSpec.scala">
+package de.htwg.se.farkle.aview
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+import de.htwg.se.farkle.controller.{Controller, KeepingState}
+import de.htwg.se.farkle.model.{Game, Dice}
+import java.io.ByteArrayInputStream
+
+class TuiSpec extends AnyWordSpec {
+  "A TUI" should {
+    
+    "process 'r' to roll dice and 'q' to quit" in {
+      val controller = new Controller(Game())
+      val tui = TUI(controller)
+      val in = new ByteArrayInputStream("r\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+      controller.game.dice.nonEmpty should be(true)
+    }
+
+    "process 'b' to bank the score" in {
+      val controller = new Controller(Game())
+      val tui = TUI(controller)
+      
+      // FIX: Wir geben dem Spieler 100 Punkte, damit das State Pattern das Sichern erlaubt!
+      controller.game = controller.game.copy(turnScore = 100)
+      
+      val in = new ByteArrayInputStream("b\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+      // Nach einem Bank-Befehl ist sofort Player 2 dran
+      controller.game.currentPlayer.name should be("Player 2")
+    }
+
+    "process 'k 1 2' to keep dice" in {
+      val controller = new Controller(Game())
+      val tui = TUI(controller)
+      
+      // FIX: Damit 'keep' funktioniert, müssen wir im KeepingState sein und Würfel haben
+      controller.state = new KeepingState()
+      controller.game = controller.game.copy(dice = List(Dice(1), Dice(5), Dice(2)))
+      
+      val in = new ByteArrayInputStream("k 1 2\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+      // Score sollte sich auf 150 aktualisieren
+      controller.game.turnScore should be(150)
+    }
+
+    "handle invalid keep input like 'k a b' without crashing" in {
+      val controller = new Controller(Game())
+      val tui = TUI(controller)
+      val in = new ByteArrayInputStream("k a b\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+    }
+
+    "handle completely unknown input correctly" in {
+      val controller = new Controller(Game())
+      val tui = TUI(controller)
+      val in = new ByteArrayInputStream("blabla\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+    }
+
+    "process 'z' to undo" in {
+  val controller = new Controller(Game())
+  val tui = new TUI(controller)
+  val in = new java.io.ByteArrayInputStream("z\nq\n".getBytes)
+  Console.withIn(in) { tui.run() }
+  // Da am Anfang kein Zustand zum Rückgängigmachen da ist, passiert nichts Schlimmes.
+  controller.game.turnScore should be(0)
+}
+
+    "process 'y' to redo" in {
+      val controller = new Controller(Game())
+      val tui = new TUI(controller)
+      val in = new java.io.ByteArrayInputStream("y\nq\n".getBytes)
+      Console.withIn(in) { tui.run() }
+      // Da am Anfang kein Zustand zum Wiederholen da ist, passiert nichts Schlimmes.
+      controller.game.turnScore should be(0)
+    }
+
+    "exit the loop safely if input is null (EOF)" in {
+      val controller = new Controller(Game())
+      val tui = new TUI(controller)
+      // Wir übergeben einen leeren Stream, was readLine dazu zwingt, "null" zurückzugeben
+      val in = new java.io.ByteArrayInputStream(Array.emptyByteArray)
+      Console.withIn(in) { tui.run() }
+      // Wenn der Test hier ankommt und nicht in einer Endlosschleife hängt, ist der Zweig zu 100 % abgedeckt!
+      controller.game.turnScore should be(0)
+    }
+  }
+}
+</file>
+
+<file path="src/test/scala/de/htwg/se/farkle/controller/ControllerSpec.scala">
+package de.htwg.se.farkle.controller
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers._
+import de.htwg.se.farkle.model.{Game, Player, Dice, Evaluator, KcdEvaluator}
+import de.htwg.se.farkle.util.Observer
+
+class ControllerSpec extends AnyWordSpec {
+  "A Controller" should {
+    
+    "notify its observers after rolling the dice and change to KeepingState" in {
+      val controller = new Controller(Game())
+      var notified = false
+      controller.add(new Observer { override def update(): Unit = notified = true })
+      
+      controller.rollDice()
+      notified should be(true)
+      controller.game.dice.length should be(6)
+      // Nach einem gültigen Wurf müssen wir im KeepingState sein
+      controller.state.isInstanceOf[KeepingState] should be(true)
+    }
+
+    "keep selected dice, evaluate them, update the turn score, and transition back to RollingState" in {
+      val game = Game(dice = List(Dice(1), Dice(5), Dice(2), Dice(3)))
+      val controller = new Controller(game)
+      
+      // WICHTIG: Wir versetzen den Controller manuell in den passenden Zustand für diesen Test
+      controller.state = new KeepingState()
+      
+      controller.keep(List(1, 2)) // Behalte Würfel 1 und 5
+      
+      controller.game.turnScore should be(150)
+      controller.game.activeDice should be(4)
+      // Nach dem Behalten wechselt der Zustand wieder zu RollingState (bereit für den nächsten Wurf oder Bank)
+      controller.state.isInstanceOf[RollingState] should be(true)
+    }
+
+    "trigger Hot Dice and reset active dice to 6 if all dice are kept" in {
+      val game = Game(dice = List(Dice(1)), activeDice = 1)
+      val controller = new Controller(game)
+      
+      controller.state = new KeepingState()
+      controller.keep(List(1))
+      
+      controller.game.activeDice should be(6)
+    }
+
+    "bank the current turn score to the player and switch turns" in {
+      val game = Game(
+        players = Vector(Player("P1", 1000), Player("P2", 0)),
+        turnScore = 300,
+        currentPlayerIndex = 0
+      )
+      val controller = new Controller(game)
+      
+      controller.bank()
+      
+      controller.game.players(0).score should be(1300)
+      controller.game.currentPlayer.name should be("P2")
+      controller.game.turnScore should be(0)
+      controller.state.isInstanceOf[RollingState] should be(true)
+    }
+
+    "switch to the next player if a bust (Farkle) is rolled" in {
+      // Dank Strategy Pattern bauen wir einen Test-Evaluator, der IMMER 0 Punkte liefert
+      val zeroEvaluator = new Evaluator {
+        override def evaluate(dice: List[Dice]): Int = 0
+      }
+      
+      val controller = new Controller(Game(), zeroEvaluator)
+      
+      // Wenn wir jetzt würfeln, schlägt der zeroEvaluator an -> Bust!
+      controller.rollDice()
+      
+      // Der Zug muss sofort zum nächsten Spieler gewechselt haben
+      controller.game.currentPlayerIndex should be(1)
+      // Bei einem Bust bleibt das Spiel für den nächsten Spieler im RollingState
+      controller.state.isInstanceOf[RollingState] should be(true)
+    }
+
+    "ignore keep in RollingState" in {
+      val controller = new Controller(Game())
+      controller.state = new RollingState()
+      controller.keep(List(1))
+      // Es darf nichts passiert sein
+      controller.game.turnScore should be(0) 
+    }
+
+    "ignore bank in RollingState if turnScore is 0" in {
+      val controller = new Controller(Game())
+      controller.state = new RollingState()
+      controller.bank()
+      // Spieler darf nicht gewechselt haben, da er keine Punkte zum Sichern hatte
+      controller.game.currentPlayer.name should be("Player 1")
+    }
+
+    "ignore rollDice in KeepingState" in {
+      val controller = new Controller(Game(dice = List(Dice(1))))
+      controller.state = new KeepingState()
+      controller.rollDice()
+      // Würfel dürfen sich nicht verändert haben
+      controller.game.dice.length should be(1)
+    }
+
+    "ignore bank in KeepingState" in {
+      val controller = new Controller(Game())
+      controller.state = new KeepingState()
+      controller.bank()
+      // Spieler darf nicht gewechselt haben, da er im falschen Zustand ist
+      controller.game.currentPlayer.name should be("Player 1")
+    }
+
+    "support undo and redo" in {
+      val game = Game(dice = List(Dice(1), Dice(5), Dice(2), Dice(3)))
+      val controller = new Controller(game)
+      controller.state = new KeepingState()
+  
+      // 1. Aktion ausführen
+      controller.keep(List(1, 2))
+      controller.game.turnScore should be(150)
+      controller.state.isInstanceOf[RollingState] should be(true)
+  
+      // 2. Undo (Zeit zurückdrehen)
+      controller.undo()
+      controller.game.turnScore should be(0) 
+      controller.state.isInstanceOf[KeepingState] should be(true)
+  
+      // 3. Redo (Zeit wieder vordrehen)
+      controller.redo()
+      controller.game.turnScore should be(150)
+      controller.state.isInstanceOf[RollingState] should be(true)
+    }
+
+    "support undo and redo with SetCommand" in {
+      val game = Game(dice = List(Dice(1), Dice(5), Dice(2), Dice(3)))
+      val controller = new Controller(game)
+      controller.state = new KeepingState()
+      
+      // 1. Aktion ausführen (doStep im Command wird gerufen)
+      controller.keep(List(1, 2))
+      controller.game.turnScore should be(150)
+      
+      // 2. Undo (undoStep im Command wird gerufen)
+      controller.undo()
+      controller.game.turnScore should be(0) 
+      
+      // 3. Redo (redoStep im Command wird gerufen)
+      controller.redo()
+      controller.game.turnScore should be(150)
+      
+      // 4. Leeres Undo/Redo provozieren (um die Coverage der leeren Listen zu füllen)
+      controller.undo()
+      controller.undo() // Sollte nichts abstürzen
+      controller.redo()
+      controller.redo() // Sollte nichts abstürzen
+    }
+  }
+}
+</file>
+
+<file path="build.sbt">
+name          := "farkle"
+organization  := "de.htwg.se"
+version       := "0.0.1"
+scalaVersion  := "3.3.7" // Aktualisiert für optimalen Metals-Support!
+
+// Aktuelles ScalaTest für Scala 3
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % "test"
+coverageExcludedFiles := ".*Main.*"
+//*******************************************************************************//
+// Libraries für spätere Tasks (kompatibel mit Scala 3)
+// Auskommentiert lassen, bis wir sie brauchen!
+
+// libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
+// libraryDependencies += "com.google.inject" % "guice" % "5.1.0"
+// libraryDependencies += "net.codingwell" %% "scala-guice" % "5.1.1"
+// libraryDependencies += "org.scala-lang.modules" %% "scala-xml" % "2.3.0"
+// libraryDependencies += "com.typesafe.play" %% "play-json" % "2.10.4"
+</file>
+
+<file path="src/main/scala/de/htwg/se/farkle/controller/Controller.scala">
+package de.htwg.se.farkle.controller
+
+import de.htwg.se.farkle.model.{Game, Evaluator, KcdEvaluator}
+import de.htwg.se.farkle.util.{Observable, UndoManager}
+
+class Controller(var game: Game, val evaluator: Evaluator = new KcdEvaluator()) extends Observable {
+  
+  var state: GameState = new RollingState()
+  val undoManager = new UndoManager()
+
+  // --- Delegation an das State Pattern ---
+  def rollDice(): Unit = state.rollDice(this)
+  def keep(indices: List[Int]): Unit = state.keep(this, indices)
+  def bank(): Unit = state.bank(this)
+
+  // --- Neue Undo/Redo Schnittstelle ---
+  def undo(): Unit = {
+    undoManager.undoStep()
+    notifyObservers()
+  }
+
+  def redo(): Unit = {
+    undoManager.redoStep()
+    notifyObservers()
+  }
+
+  // --- Hilfsmethoden für die Zustände (Command Pattern Integration) ---
+  def doKeep(indices: List[Int]): Unit = {
+    val keptDice = indices.map(i => i - 1).flatMap(i => game.dice.lift(i))
+    val points = evaluator.evaluate(keptDice)
+    
+    var newActive = game.activeDice - keptDice.length
+    if (newActive <= 0) newActive = 6 
+    
+    val newGame = game.copy(
+      turnScore = game.turnScore + points,
+      activeDice = newActive,
+      dice = List.empty 
+    )
+    val newState = new RollingState()
+    
+    undoManager.doStep(new SetCommand(this, game, state, newGame, newState))
+    notifyObservers()
+  }
+
+  def doBank(): Unit = {
+    val currentPlayer = game.currentPlayer
+    val updatedPlayer = currentPlayer.addScore(game.turnScore)
+    val updatedPlayers = game.players.updated(game.currentPlayerIndex, updatedPlayer)
+    
+    val newGame = game.copy(players = updatedPlayers).nextPlayer()
+    val newState = new RollingState()
+
+    undoManager.doStep(new SetCommand(this, game, state, newGame, newState))
+    notifyObservers()
+  }
+}
+</file>
+
+</files>

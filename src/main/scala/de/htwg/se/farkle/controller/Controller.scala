@@ -24,13 +24,24 @@ class Controller(var game: Game, val evaluator: Evaluator = new KcdEvaluator()) 
     notifyObservers()
   }
 
-  // --- Hilfsmethoden für die Zustände (Command Pattern Integration) ---
+// --- Hilfsmethoden für die Zustände (Command Pattern Integration) ---
   def doKeep(indices: List[Int]): Unit = {
     val keptDice = indices.map(i => i - 1).flatMap(i => game.dice.lift(i))
     val points = evaluator.evaluate(keptDice)
     
+    // GENIALER TRICK: Prüfen, ob "blinde Passagiere" (nutzlose Würfel) dabei sind.
+    // Wenn das Entfernen eines Würfels den Score NICHT verändert, war er wertlos!
+    val hasUselessDice = keptDice.exists { d =>
+      evaluator.evaluate(keptDice.diff(List(d))) == points
+    }
+    
+    // Wenn der Score 0 ist ODER nutzlose Würfel dabei sind -> Abbruch!
+    if (points == 0 || hasUselessDice) {
+      return // Der Controller ignoriert den illegalen Zug
+    }
+    
     var newActive = game.activeDice - keptDice.length
-    if (newActive <= 0) newActive = 6 
+    if (newActive == 0) newActive = 6 
     
     val newGame = game.copy(
       turnScore = game.turnScore + points,

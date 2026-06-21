@@ -86,6 +86,17 @@ class ControllerSpec extends AnyWordSpec {
       controller.game.turnScore should be(0) 
     }
 
+    "ignore keep if selection evaluates to 0 points" in {
+      val game = Game(dice = List(Dice(2), Dice(3))) // Weder 2 noch 3 geben einzeln Punkte
+      val controller = new Controller(game)
+      controller.state = new KeepingState()
+      
+      controller.keep(List(1, 2)) 
+      
+      // Zug muss geblockt werden (points == 0)
+      controller.game.turnScore should be(0)
+    }
+
     "ignore bank in RollingState if turnScore is 0" in {
       val controller = new Controller(Game())
       controller.state = new RollingState()

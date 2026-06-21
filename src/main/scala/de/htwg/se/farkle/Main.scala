@@ -1,24 +1,27 @@
 package de.htwg.se.farkle
 
-// Hier importieren wir die Klassen aus den anderen Ordnern!
-import de.htwg.se.farkle.model._  // Das _ bedeutet: "Importiere ALLES aus dem model-Ordner"
+import de.htwg.se.farkle.model._
 import de.htwg.se.farkle.controller.Controller
 import de.htwg.se.farkle.aview.TUI
+import de.htwg.se.farkle.aview.gui.FarkleGUI
+import scala.swing.Swing
 
 object Main {
   def main(args: Array[String]): Unit = {
     println("Starte Kingdom Come: Farkle...")
     
-    // 1. Model erstellen (Unsere reinen Daten)
+    // 1. Model und Controller erstellen
     val game = Game()
+    val controller = new Controller(game)
     
-    // 2. Controller erstellen und Model übergeben (Das Gehirn)
-    val controller = Controller(game)
+    // 2. GUI sicher auf dem Swing-Thread starten
+    Swing.onEDT {
+      val gui = new FarkleGUI(controller)
+      gui.visible = true
+    }
     
-    // 3. TUI erstellen und Controller übergeben (Die Augen)
-    val tui = TUI(controller)
-    
-    // Spiel-Schleife der TUI starten
+    // 3. TUI auf dem Main-Thread starten
+    val tui = new TUI(controller)
     tui.run()
   }
 }
